@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='UTF-8'>
+    <meta charset="utf-8">
+    <title>Zentalk-Web | Chat Application</title>
+    <meta name="language" content="en">
+    <meta name="coverage" content="Worldwide">
+    <meta name="page-type" content="Chat Application">
+    <link rel="icon" type="image/png" href="zentachainlogoblack.png" alt="Zentalk_Web_Logo">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Zentalk Web is a End 2 End Hybrid Encrypted Chat Application">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href="/styles.css" rel="stylesheet">
+    <script src="disable.js"></script>
+
+    <script src='https://unpkg.com/react@16.3.1/umd/react.production.min.js'></script>
+    <script src='https://unpkg.com/react-dom@16.3.1/umd/react-dom.production.min.js'></script>
+    <script src='https://unpkg.com/react-router-dom@5.0.0/umd/react-router-dom.min.js'></script>
+    <script src='https://unpkg.com/babel-standalone@6.26.0/babel.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.slim.js"
+    integrity="sha256-Dul4c09cdrWKXVtallPxF558lwxMwCC8dXJdZ0PVW54=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/immutable/3.8.2/immutable.min.js"
+    integrity="sha256-+0IwgnFxUKpHZPXBhTQkuv+Dqy0eDno7myZB6OOjORA=" crossorigin="anonymous"></script>
+    
+  </head>
+  <body id="hello">
+    
+    <script type='text/babel'>
+
+        class PrimaryNavigation extends React.Component {
+            render() {
+                return <div class="navbar">
+                </div>
+            }
+        }
+
+        class MessageList extends React.Component {
+            
+            render() {
+                var messageListObj = this;
+                return <div class="message-list" ref={this.props.chatView}>
+                            <div class="message full-width" >    
+                            {
+                                this.props.messages.map(function(message, i){
+                                    return   <p>
+                                        <span className={(message.sender == messageListObj.props.orgPkey) ? 'user1' : 'user2'}>
+                                            {messageListObj.props.getKeyShorted(message.sender)}
+                                        </span>
+                                        &#10148; {message.text}
+                                    </p>
+                                })
+                            }
+                            </div>
+                        </div>
+            }
+        }
+
+        class MessageSender extends React.Component {
+            render() {
+                return <div class="bottom-bar full-width" id="message-input">
+                        <div class="gradient-border">
+                            <input 
+                                class="message-input" 
+                                type="text" 
+                                placeholder="Your Message..." 
+                                name="Send Msg"
+                                onChange={this.props.onChange} 
+                                onKeyDown={this.props.onKeyDown}
+                                value={this.props.draft}
+                            />
+                        </div>
+                    </div>;
+            }
+        }
+
+        class SideBar extends React.Component {
+            
+            render() {
+                return <div  class="info-container full-width">
+                    {
+                        this.props.viewInfo ?
+                            <div>
+                                <div id="chatjoin">
+                                    <div class="room-select">
+                                        <input 
+                                            type="text" 
+                                            class="room-id" 
+                                            placeholder="Choose Room" 
+                                            id="room-id" 
+                                            name="Choose Room"
+                                            value={this.props.pendingRoom}
+                                            onChange={this.props.onChange} 
+                                            onKeyDown={this.props.onKeyDown}
+                                        />
+                                    </div>
+                                </div>
+                                <div class="room-btn">
+                                    <input 
+                                        class="join-button" 
+                                        type="submit" 
+                                        onClick={this.props.handleClickDown}  
+                                        value="JOIN"
+                                        name="JOIN"
+                                    />
+                                </div>
+                                <div class="divider"></div>
+                                <div class="notification-list" ref="notificationContainer">
+                                {
+                                    this.props.notifications.length !=0 ? 
+                                    this.props.notifications.map((item,i) => 
+                                            <div className={(i%2 == 0 )?"notification left-align":"notification half-width"}>
+                                                <div className={i%2 == 0 ?"notification-timestamp ":"notification-message"}>{item}</div>
+                                            </div> 
+                                        ):""
+                                }
+                                </div>
+                                <div class="flex-fill"></div>
+                                <div class="divider mobile_none"></div>
+                                
+                                <div class="keys full-width">
+                                    <div class="user2_Key">
+                                    {
+                                        this.props.destinationPublicKey? 
+                                        <div class="input-wrap">
+                                            <input type="checkbox" onClick={this.props.handleClickDown} class="publicKey--visibleToggle" checked />
+                                            <div class="publicKey--background"></div>
+                                            {
+                                                this.props.viewInfo?
+                                                    <div class="publicKey--visibleToggle-eye open">
+                                                        <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/138980/eye-open.png" />
+                                                    </div>
+                                                :
+                                                    <div>
+                                                        <div class="publicKey--visibleToggle-eye open">
+                                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/138980/eye-open.png" />
+                                                        </div>
+                                                        <div class="publicKey--visibleToggle-eye close">
+                                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/138980/eye-close.png" />
+                                                        </div>
+                                                    </div>
+                                            }
+
+                                            <h3>THEIR PUBLIC KEY & IDENTIFICATION - { this.props.getKeyShorted(this.props.destinationPublicKey)}</h3>
+                                            <p>{this.props.destinationPublicKey}</p>
+                                        </div>
+                                        :
+                                        <h4>Waiting for second user to join room...</h4>
+                                    }
+                                    </div>
+
+                                    <div class="dividerkey"></div>
+
+                                    <div class="user1_Key">
+                                    {
+                                        this.props.originPublicKey ? <div>
+                                            <h3>YOUR PUBLIC KEY & IDENTIFICATION - {this.props.getKeyShorted(this.props.originPublicKey)}</h3>
+                                            <p>{this.props.originPublicKey}</p>
+                                        </div> 
+                                        :                         
+                                        <div class="keypair-loader full-width">
+                                            <div class="loader"></div>
+                                        </div>
+                                    }
+                                    </div>
+                                </div>
+                            </div>
+                        :
+                            <div>
+                                <div class="keys full-width">
+                                    <div class="user2_Key">
+                                    {
+                                        this.props.destinationPublicKey? 
+                                        <div class="input-wrap">
+                                            <input 
+                                                type="checkbox" 
+                                                onClick={this.props.handleClickDown} 
+                                                class="publicKey--visibleToggle" 
+                                                checked 
+                                            />
+                                            <div class="publicKey--background"></div>
+                                            {
+                                                this.props.viewInfo?
+                                                    <div class="publicKey--visibleToggle-eye open">
+                                                        <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/138980/eye-open.png" />
+                                                    </div>
+                                                :
+                                                    <div>
+                                                        <div class="publicKey--visibleToggle-eye open">
+                                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/138980/eye-open.png" />
+                                                        </div>
+                                                        <div class="publicKey--visibleToggle-eye close">
+                                                            <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/138980/eye-close.png" />
+                                                        </div>
+                                                    </div>
+                                            }
+                                        </div>
+                                        :
+                                        ''
+                                    }
+                                    </div>
+                                    <div class="dividerkey"></div>
+                                </div>
+                            </div>
+                    }
+                </div>
+            }
+        }
+
+        class MyComponent extends React.Component{
+
+            constructor(props) {
+                super(props);
+                // Don't call this.setState() here!
+                this.state = { 
+                    pendingRoom: Math.floor(Math.random() * 1000 * 100),
+                    messages: [],
+                    notifications: [],
+                    draft: '',
+                    address: null,
+                    data: {userCount: 0},
+                    viewInfo: true
+                };
+
+                //variables
+                this.ZentalkWorker = null
+                this.originPublicKey = null;
+                this.destinationPublicKey = null;
+                this.currentRoom = null
+                this.socket = null;
+
+                //refs
+                this.chatView = React.createRef()
+                
+                //functions
+                this.addNotification = this.addNotification.bind(this);
+            }
+
+            async  componentDidMount(){
+                this.addNotification('Welcome Zentalk-Web!');
+                this.addNotification('Please Wait Zentalk Generating New Key-Pair...');
+                this.ZentalkWorker = new Worker('zentalk-worker.js');
+                this.originPublicKey = await this.getWebWorkerResponse('generate-keys');
+                this.addNotification(
+                    `Keypairs Are Now Generated: ${this.getKeyShorted(this.originPublicKey)}`
+                );
+                this.addNotification('User see only the Public-Key');
+                this.socket = io()
+                this.setupSocketListeners()
+            }
+
+            setupSocketListeners() {
+                this.socket.on('connect', () => {
+                    this.addNotification('Safe Connected With Zentalk');
+                    this.joinRoom();
+                });
+
+                this.socket.on('disconnect', () =>
+                    this.addNotification('Zentalk Lost Connection')
+                );
+                
+                this.socket.on('MESSAGE', async message => {
+                    if (message.recipient === this.originPublicKey) {
+                        message.text = await this.getWebWorkerResponse(
+                            'decrypt',
+                            message.text
+                        );
+                        // this.messages.push(message);
+                        this.setState({ messages: [...this.state.messages, message] })
+                    }
+                });
+
+                this.socket.on('NEW_CONNECTION', () => {
+                    this.addNotification('Another User Has Joined The Room');
+                    this.sendPublicKey();
+                });
+
+                this.socket.on('ROOM_JOINED', newRoom => {
+                    this.currentRoom = newRoom;
+                    this.addNotification(
+                    `User Have Joined The Zentaroom - ${this.currentRoom}`
+                    );
+                    this.sendPublicKey();
+                });
+
+                this.socket.on('PUBLIC_KEY', key => {
+                    this.addNotification(
+                    `Public Key Received - ${this.getKeyShorted(key)}`
+                    );
+                    this.destinationPublicKey = key;
+                });
+
+                this.socket.on('user disconnected', () => {
+                    this.notify(
+                    `The User is Disconnected - ${this.getKeyShorted(
+                        this.destinationKey
+                    )}`
+                    );
+                    this.destinationPublicKey = null;
+                });
+
+                this.socket.on('ROOM_FULL', () => {
+                    this.addNotification(
+                    `Cannot Join ${this.state.pendingRoom}, Zentaroom is full`
+                    );
+                    this.state.pendingRoom = Math.floor(Math.random() * 1000 * 10);
+                    this.joinRoom();
+                });
+
+                this.socket.on('INTRUSION_ATTEMPT', () => {
+                    this.addNotification(
+                    'Sorry Third User are attempted to join the Zentarooms'
+                    );
+                });
+            }
+
+            joinRoom() {
+                // debugger
+                if (this.state.pendingRoom !== this.currentRoom && this.originPublicKey) {
+                    this.addNotification(`Connecting to Zentaroom - ${this.state.pendingRoom}`);
+                    this.setState({messages: []})
+                    this.destinationPublicKey = null;
+                    this.socket.emit('JOIN', this.state.pendingRoom);
+                }
+            }
+
+            async sendMessage() {
+                if (!this.state.draft || this.state.draft === '') {
+                    return;
+                }
+                let message = Immutable.Map({
+                    text: this.state.draft,
+                    recipient: this.destinationPublicKey,
+                    sender: this.originPublicKey
+                });
+                this.setState({draft: ''})
+                this.addMessage(message.toObject());
+
+                if (this.destinationPublicKey) {
+                    const encryptedText = await this.getWebWorkerResponse('encrypt', [
+                        message.get('text'),
+                        this.destinationPublicKey
+                    ]);
+                    const encryptedMsg = message.set('text', encryptedText);
+                    this.socket.emit('MESSAGE', encryptedMsg.toObject());
+                }
+            }
+
+            addMessage(message) {
+                // this.messages.push(message)
+                this.setState({ messages: [...this.state.messages, message] })
+                this.autoscroll(this.chatView);
+            }
+
+            addNotification(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.setState({ notifications: [...this.state.notifications, timestamp, message] }) //simple value
+                this.autoscroll(this.chatView); //this.autoscroll(this.$refs.notificationContainer);
+            }
+
+            getWebWorkerResponse(messageType, messagePayload) {
+                return new Promise((resolve) => {
+                    const messageId = Math.floor(Math.random() * 100000 * 10);
+                    this.ZentalkWorker.postMessage(
+                        [messageType, messageId].concat(messagePayload)
+                    );
+                    const handler = function(e) {
+                        if (e.data[0] === messageId) {
+                            e.currentTarget.removeEventListener(e.type, handler);
+                            resolve(e.data[1]);
+                        }
+                    };
+                    this.ZentalkWorker.addEventListener('message', handler);
+                });
+            }
+
+            sendPublicKey() {
+                if (this.originPublicKey) {
+                    this.socket.emit('PUBLIC_KEY', this.originPublicKey);
+                }
+            }
+
+            getKeyShorted(key) {
+                return key.slice(400, 416, 432);
+            }
+
+            autoscroll(element) {
+                this.scrollToBottom()
+            }
+
+            scrollToBottom = () => this.chatView.current.scrollIntoView({ behavior: "smooth", block: "end" })
+
+            handleOnChange = (e) => {
+
+                if(e.target.name == "Send Msg") {
+                    this.setState({ draft: e.target.value})
+                }
+
+                if(e.target.name == "Choose Room") {
+                    this.setState({pendingRoom: e.target.value})
+                }
+                
+            }
+
+            handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    if(e.target.name == "Send Msg") {
+                        this.sendMessage()
+                    }
+
+                    if(e.target.name == "Choose Room") {
+                        this.joinRoom()
+                    }
+                }
+            }
+
+            handleClickDown = (e) => {
+                if(e.target.name == "JOIN") {
+                    this.joinRoom()
+                }
+                else {
+                    this.setState({viewInfo: !this.state.viewInfo})
+                }
+                
+            }
+
+            componentDidUpdate() {
+                this.scrollToBottom();
+            }
+
+            render() {
+            
+                var notifications = this.state.notifications != "undefined" ? this.state.notifications : [];
+                var orgPkey = this.originPublicKey;
+                var obj = this
+
+                return <div id="zentalk">
+                    <PrimaryNavigation />
+                    <div class="chat-container full-width" >
+                        <MessageList 
+                            messages={this.state.messages}
+                            orgPkey={orgPkey}
+                            chatView={this.chatView}
+                            getKeyShorted={obj.getKeyShorted}
+                            scrollIntoView={this.scrollIntoView}
+                        />
+                    </div>
+                    <SideBar 
+                        viewInfo={this.state.viewInfo}
+                        notifications={notifications}
+                        destinationPublicKey={this.destinationPublicKey}
+                        originPublicKey={this.originPublicKey}
+                        pendingRoom={this.state.pendingRoom}
+                        getKeyShorted={this.getKeyShorted}
+                        handleClickDown={this.handleClickDown}
+                        onChange={this.handleOnChange} 
+                        onKeyDown={this.handleKeyDown}
+                    />
+                    <MessageSender
+                        draft={this.state.draft}
+                        name="Send Msg"
+                        onChange={this.handleOnChange} 
+                        onKeyDown={this.handleKeyDown}
+                    />
+                </div>
+            }
+        }
+
+        ReactDOM.render(<MyComponent />, document.getElementById('hello'))
+
+    </script>
+  </body>
+</html>
